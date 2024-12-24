@@ -1,1 +1,2 @@
+![A green square contains a cycle of money from a piggy bank flowing to a man in a mask to a hacker sitting behind a keyboard and then finally to a credit card. The text reads "Alexa Skill - Scam Sense. Daily fraud and scam alerts.](assets/ScamSense.png)
 # ScamSense
