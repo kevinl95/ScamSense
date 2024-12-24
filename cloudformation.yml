@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for Scam Sense Alexa Skill
+
+Parameters:
+  NewsApiToken:
+    Type: String
+    NoEcho: true
+    Description: API token for The News API
+
+Resources:
+
+  ScamSenseSecrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: ScamSenseSecrets
+      Description: Secrets for Scam Sense application
+      SecretString: !Sub |
+        {
+          "NEWS_API_KEY": "${NewsApiToken}"
+        }
+
+  ScamSenseEventBridgeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      ScheduleExpression: "cron(0 12 * * ? *)" # 6AM Central Time
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ScamSenseDailySummaryFunction.Arn
+          Id: ScamSenseDailySummaryTarget
+
+  ScamSenseDailySummaryFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt ScamSenseLambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          from datetime import datetime
+
+          def handler(event, context):
+              secrets_client = boto3.client('secretsmanager')
+              secret_arn = os.environ['SECRETS_MANAGER_ARN']
+              secret_value = secrets_client.get_secret_value(SecretId=secret_arn)
+              api_key = json.loads(secret_value['SecretString'])['NEWS_API_KEY']
+
+              # Fetch and process articles (pseudo-code)
+              articles = fetch_articles(api_key)
+              summary = summarize_articles(articles)
+
+              dynamodb = boto3.resource('dynamodb')
+              table = dynamodb.Table('ScamSenseSummaries')
+              table.put_item(Item={
+                  'SummaryDate': datetime.now().strftime('%Y-%m-%d'),
+                  'Summary': summary
+              })
+
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Daily summary stored successfully!')
+              }
+
+  ScamSenseDatabase:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ScamSenseSummaries
+      AttributeDefinitions:
+        - AttributeName: SummaryDate
+          AttributeType: S
+      KeySchema:
+        - AttributeName: SummaryDate
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  ScamSenseLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ScamSenseLambdaPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                Resource: !GetAtt ScamSenseDatabase.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+              - Effect: Allow
+                Action: "events:PutTargets"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref ScamSenseSecrets
+
+  ScamSenseAlexaSkillFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt ScamSenseLambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+
+          def handler(event, context):
+              dynamodb = boto3.resource('dynamodb')
+              table = dynamodb.Table('ScamSenseSummaries')
+
+              response = table.get_item(
+                  Key={'SummaryDate': datetime.now().strftime('%Y-%m-%d')}
+              )
+
+              summary = response.get('Item', {}).get('Summary', 'No summary available for today.')
+
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({'Summary': summary})
+              }
+      Runtime: python3.9
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: "ScamSenseSummaries"
+
+Outputs:
+  LambdaFunctionArn:
+    Description: ARN of the Alexa Skill Lambda function
+    Value: !GetAtt ScamSenseAlexaSkillFunction.Arn
+  DatabaseName:
+    Description: Name of the DynamoDB table
+    Value: !Ref ScamSenseDatabase
