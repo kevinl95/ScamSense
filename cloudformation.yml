@@ -2,12 +2,26 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: CloudFormation template for Scam Sense Alexa Skill
 
 Parameters:
+  SambaNovaCloudKey:
+    Type: String
+    Description: "SambaNova Cloud API Key for the Lambda function"
+    NoEcho: true # Hides the API key from logs and output
   NewsApiToken:
     Type: String
     NoEcho: true
     Description: API token for The News API
 
 Resources:
+
+  OpenAILayer:
+      Type: AWS::Lambda::LayerVersion
+      Properties:
+        Content:
+          S3Bucket: scamsense
+          S3Key: lambda-layer.zip
+        CompatibleRuntimes:
+          - python3.13
+        Description: "Public Layer with the OpenAI SDK"
 
   ScamSenseSecrets:
     Type: AWS::SecretsManager::Secret
@@ -16,7 +30,8 @@ Resources:
       Description: Secrets for Scam Sense application
       SecretString: !Sub |
         {
-          "NEWS_API_KEY": "${NewsApiToken}"
+          "NEWS_API_KEY": "${NewsApiToken}",
+          "SAMBA_KEY": "${SambaNovaCloudKey}"
         }
 
   ScamSenseEventBridgeRule:
@@ -38,22 +53,46 @@ Resources:
           import json
           import boto3
           from datetime import datetime
+          from openai import OpenAI
 
           def handler(event, context):
               secrets_client = boto3.client('secretsmanager')
               secret_arn = os.environ['SECRETS_MANAGER_ARN']
               secret_value = secrets_client.get_secret_value(SecretId=secret_arn)
+              samba_key = json.loads(secret_value['SecretString'])['SAMBA_KEY']
+
               api_key = json.loads(secret_value['SecretString'])['NEWS_API_KEY']
+
+              client = OpenAI(
+                  base_url="https://api.sambanova.ai/v1/",
+                  api_key=samba_key,  
+              )
+
+              model = "Meta-Llama-3.1-405B-Instruct"
 
               # Fetch and process articles (pseudo-code)
               articles = fetch_articles(api_key)
-              summary = summarize_articles(articles)
+              prompt = ""
+              completion = client.chat.completions.create(
+                  model=model,
+                  messages=[
+                      {
+                          "role": "user", 
+                          "content": prompt,
+                      }
+                  ],
+                  stream=True,
+              )
+
+              response = ""
+              for chunk in completion:
+                  response += chunk.choices[0].delta.content or ""
 
               dynamodb = boto3.resource('dynamodb')
               table = dynamodb.Table('ScamSenseSummaries')
               table.put_item(Item={
                   'SummaryDate': datetime.now().strftime('%Y-%m-%d'),
-                  'Summary': summary
+                  'Summary': response
               })
 
               return {
