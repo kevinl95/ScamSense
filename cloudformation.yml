@@ -51,6 +51,9 @@ Resources:
       MemorySize: 128
       Runtime: "python3.13"
       Timeout: 300
+      Environment:
+        Variables:
+          SECRETS_MANAGER_ARN: !Ref ScamSenseSecrets
       Layers:
         - !Ref OpenAILayer
       Code:
@@ -58,11 +61,13 @@ Resources:
           import json
           import boto3
           import urllib3
+          import os
           from datetime import datetime, timedelta
           from openai import OpenAI
 
           def handler(event, context):
               secrets_client = boto3.client('secretsmanager')
+              secret_arn = os.environ['SECRETS_MANAGER_ARN']
               secret_value = secrets_client.get_secret_value(SecretId=secret_arn)
               samba_key = json.loads(secret_value['SecretString'])['SAMBA_KEY']
 
