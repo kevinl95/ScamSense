@@ -188,6 +188,7 @@ Resources:
         ZipFile: |
           import json
           import boto3
+          from datetime import datetime
 
           def handler(event, context):
               dynamodb = boto3.resource('dynamodb')
