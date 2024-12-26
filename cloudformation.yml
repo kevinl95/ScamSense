@@ -52,7 +52,8 @@ Resources:
         ZipFile: |
           import json
           import boto3
-          from datetime import datetime
+          import urllib3
+          from datetime import datetime, timedelta
           from openai import OpenAI
 
           def handler(event, context):
@@ -70,8 +71,35 @@ Resources:
 
               model = "Meta-Llama-3.1-405B-Instruct"
 
-              # Fetch and process articles (pseudo-code)
-              articles = fetch_articles(api_key)
+              query_params = {
+                  "api_token": api_key,
+                  "search": "cyber|fraud|scams",
+                  "locale": "us,ca",
+                  "language": "en",
+                  "search_fields": "title,description,keywords,main_text",
+                  "published_after": (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'),
+                  "sort": "relevance_score"
+              }
+
+              http = urllib3.PoolManager()
+              # Construct URL with query parameters
+              base_url = "https://api.thenewsapi.com/v1/news/top"
+              url = f"{base_url}?{urlencode(query_params)}"
+              token_response = http.request("GET", url, headers=query_params)
+              token_data = json.loads(token_response.data.decode('utf-8'))
+
+              # Current date
+              current_date = datetime.now().strftime('%Y-%m-%d')
+
+              # Construct the prompt
+              prompt = f"""
+              Summarize the following articles related to scams, fraud, and financial crimes. Start the response with the phrase: "Your Scam Sense report for {current_date}." Then provide a brief summary of the most important details from the articles. The summary should be concise, well-structured, and include the major insights or patterns across the articles.
+
+              Today's date is {current_date}.
+
+              Articles to summarize:
+              {token_data}
+              """
               prompt = ""
               completion = client.chat.completions.create(
                   model=model,
@@ -90,8 +118,9 @@ Resources:
 
               dynamodb = boto3.resource('dynamodb')
               table = dynamodb.Table('ScamSenseSummaries')
+              yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
               table.put_item(Item={
-                  'SummaryDate': datetime.now().strftime('%Y-%m-%d'),
+                  'SummaryDate': yesterday,
                   'Summary': response
               })
 
