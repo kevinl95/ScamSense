@@ -63,6 +63,7 @@ Resources:
           import urllib3
           import os
           from datetime import datetime, timedelta
+          from urllib.parse import urlencode
           from openai import OpenAI
 
           def handler(event, context):
