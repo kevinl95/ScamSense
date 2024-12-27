@@ -193,21 +193,35 @@ Resources:
         ZipFile: |
           import json
           import boto3
-          from datetime import datetime
+          from datetime import datetime, timedelta
 
           def handler(event, context):
               dynamodb = boto3.resource('dynamodb')
               table = dynamodb.Table('ScamSenseSummaries')
 
-              response = table.get_item(
-                  Key={'SummaryDate': datetime.now().strftime('%Y-%m-%d')}
-              )
+              # Get today's and yesterday's dates
+              today = datetime.now().strftime('%Y-%m-%d')
+              yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-              summary = response.get('Item', {}).get('Summary', 'No summary available for today.')
+              # Attempt to retrieve today's summary
+              response = table.get_item(Key={'SummaryDate': today})
+              summary = response.get('Item', {}).get('Summary')
 
+              # If no summary is found for today, attempt to retrieve yesterday's summary
+              if not summary:
+                  response = table.get_item(Key={'SummaryDate': yesterday})
+                  summary = response.get('Item', {}).get('Summary', 'No summary is available for today or yesterday.')
+
+              # Format the response for Alexa
               return {
-                  'statusCode': 200,
-                  'body': json.dumps({'Summary': summary})
+                  'version': '1.0',
+                  'response': {
+                      'outputSpeech': {
+                          'type': 'PlainText',
+                          'text': summary
+                      },
+                      'shouldEndSession': True
+                  }
               }
       Runtime: "python3.13"
       Timeout: 300
