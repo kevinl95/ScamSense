@@ -43,6 +43,14 @@ Resources:
         - Arn: !GetAtt ScamSenseDailySummaryFunction.Arn
           Id: ScamSenseDailySummaryTarget
 
+  ScamSenseEventBridgeRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ScamSenseDailySummaryFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ScamSenseEventBridgeRule.Arn
+
   ScamSenseDailySummaryFunction:
     Type: AWS::Lambda::Function
     Properties:
