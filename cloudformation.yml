@@ -95,6 +95,7 @@ Resources:
                   "locale": "us,ca",
                   "language": "en",
                   "search_fields": "title,description,keywords,main_text",
+                  "exclude_categories": "politics",
                   "published_after": (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'),
                   "sort": "relevance_score"
               }
