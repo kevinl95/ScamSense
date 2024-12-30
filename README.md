@@ -2,6 +2,8 @@
 # ScamSense
 [![Lint CloudFormation Templates](https://github.com/kevinl95/ScamSense/actions/workflows/main.yml/badge.svg)](https://github.com/kevinl95/ScamSense/actions/workflows/main.yml)
 
+[![A blue banner that reads "Enable on your smart speaker or mobile app, click here!"](assets/install.png)](https://www.amazon.com/dp/B0DRPRHXNF/)
+
 Scam Sense is an Alexa skill designed to empower users with daily summaries of news articles focused on financial fraud and scams. By leveraging Llama (via SambaNova Cloud) and robust AWS infrastructure, Scam Sense delivers concise and insightful updates to help users stay informed about potential risks.
 
 The skill utilizes the following technologies and features:
