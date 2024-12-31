@@ -112,7 +112,7 @@ Resources:
 
               # Construct the prompt
               prompt = f"""
-              Summarize the following articles related to scams, fraud, and financial crimes. Start the response with the phrase: "Your Scam Sense report for {current_date}." Then provide a brief summary of the most important details from the articles. The summary should be concise, well-structured, and include the major insights or patterns across the articles. Provide steps users can use to avoid these scams and apply this knowledge to their life. Construct the summary like a radio broadcast, not necessarily like a list of articles you read. Limit your summary to no more than 500 words or 8000 characters, whichever comes first. Be concise and ensure key details are prioritized.
+              Summarize the following articles related to scams, fraud, and financial crimes. Start the response with the phrase: "Your Scam Sense report for {current_date}." Then provide a brief summary of the most important details from the articles along with the article's source. The summary should be concise, well-structured, and include the major insights or patterns across the articles. Provide steps users can use to avoid each scam and apply this knowledge to their life. Construct the summary like a radio broadcast, not necessarily like a list of articles you read. Limit your summary to no more than 800 characters. Be concise and ensure key details are prioritized.
 
               Today's date is {current_date}.
 
