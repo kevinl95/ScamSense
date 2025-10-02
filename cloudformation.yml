@@ -87,7 +87,7 @@ Resources:
                   api_key=samba_key,  
               )
 
-              model = "Meta-Llama-3.1-405B-Instruct"
+              model = "Llama-4-Maverick-17B-128E-Instruct"
 
               query_params = {
                   "api_token": api_key,
